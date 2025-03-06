@@ -23,7 +23,7 @@ def generate_response(query):
     # Format the prompt for LLM
     prompt = f"""
     You are a helpful AI assistant answering user queries based on provided documents.
-    Use the following context to generate a relevant response:
+    Use the following context to generate a relevant response and if the reponse is not relevant, please let the user know that you couldn't find relevant information.:
 
     {context}
 
@@ -36,7 +36,7 @@ def generate_response(query):
         response = llm(
             prompt=prompt,
             max_tokens=100,
-            temperature=0.7,
+            temperature=0.1,
             stop=["\n\n"]
         )
         
