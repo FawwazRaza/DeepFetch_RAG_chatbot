@@ -74,12 +74,3 @@ streamlit run test_frontend.py
 
 ---
 
-### Upload to GitHub
-To upload this `README.md` file to your GitHub repository, run the following commands:
-```bash
-git init
-git add README.md
-git commit -m "Add README for RAG-based AI chatbot"
-git branch -M main
-git remote add origin https://github.com/your-username/your-repository.git
-git push -u origin main
