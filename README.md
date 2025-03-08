@@ -52,6 +52,11 @@ print("Successfully logged in to Hugging Face")
 python response_generator.py
 ```
 
+#### 6.1. Generate Responses if you want to run on local terminal
+```bash
+python response_generator_for_local.py
+```
+
 #### 7. Start Backend
 ```bash
 uvicorn test_backend:app --host 0.0.0.0 --port 8000
