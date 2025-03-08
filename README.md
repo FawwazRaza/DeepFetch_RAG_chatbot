@@ -2,6 +2,8 @@
 
 This is a Retrieval-Augmented Generation (RAG)-based AI chatbot that combines document retrieval with generative AI to provide accurate and context-aware responses.
 
+![Chatbot Overview](https://github.com/FawwazRaza/DeepFetch_RAG_chatbot/blob/main/image.png)
+
 ### Features
 - **Document Processing**: Extracts text from PDFs, Word documents, and Markdown files.
 - **Vector Storage**: Uses ChromaDB to store document embeddings.
@@ -73,4 +75,3 @@ streamlit run test_frontend.py
 3. **Response Generation**: Uses Mistral-7B to generate AI responses based on retrieved context.
 
 ---
-
