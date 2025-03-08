@@ -14,4 +14,7 @@ markdown
 python-docx
 llama-cpp-python
 huggingface-hub
-
+transformers 
+accelerate 
+bitsandbytes 
+sentencepiece

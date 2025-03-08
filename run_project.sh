@@ -7,6 +7,7 @@
 # Install dependencies
 pip install -r requirements.txt
 
+pip install transformers accelerate bitsandbytes sentencepiece
 # Run and store chunk of data in the database
 python download_model_minilm.py
 python document_processor.py

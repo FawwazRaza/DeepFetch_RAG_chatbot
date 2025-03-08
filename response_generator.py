@@ -1,55 +1,78 @@
-import os
-from llama_cpp import Llama
-from retrieval import search_documents
+import torch
+import chromadb
+from huggingface_hub import login
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from sentence_transformers import SentenceTransformer
+from retrieval import search_documents  # Import retrieval function
 
-# Load the LLM model (Ensure the model file is present)
-MODEL_PATH = "mistral-7b-instruct-v0.1.Q4_K_M.gguf"  # Update with actual path
+# Log in to Hugging Face (Replace with your actual token)
+login(token="hf_......")  # Use your Hugging Face token
 
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError("⚠️ Download the Mistral-7B model in GGUF format first!")
+model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+tokenizer = AutoTokenizer.from_pretrained(model_name, token=True)
 
-# Load Mistral with a context window of 4096 tokens
-llm = Llama(model_path=MODEL_PATH, n_ctx=4096)
+if tokenizer.eos_token is None:
+    tokenizer.add_special_tokens({'eos_token': '<|endoftext|>'})
 
-def generate_response(query):
-    """Generates a response using retrieved documents as context."""
+tokenizer.pad_token = tokenizer.eos_token  
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    load_in_4bit=True,  
+    device_map="auto",
+    token=True
+).to("cuda")  
+
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+chroma_client = chromadb.PersistentClient(path="./data_store")
+collection = chroma_client.get_or_create_collection(name="documents")
+
+def select_best_context(query, retrieved_chunks):
+    """Selects the most relevant context from the retrieved results."""
+    if not retrieved_chunks:
+        return None 
+
+    query_embedding = embedding_model.encode(query)
     
-    # Retrieve relevant document chunks
-    context = search_documents(query, top_k=3)
+    best_score = -1
+    best_context = None
+    
+    for chunk in retrieved_chunks:
+        chunk_embedding = embedding_model.encode(chunk)
+        similarity = torch.nn.functional.cosine_similarity(
+            torch.tensor(query_embedding), 
+            torch.tensor(chunk_embedding), 
+            dim=0
+        ).item()
 
-    if not context or "⚠️ No relevant information found." in context:
-        return "❌ Sorry, I couldn't find relevant information."
+        if similarity > best_score:
+            best_score = similarity
+            best_context = chunk
 
-    # Format the prompt for LLM
-    prompt = f"""
-    You are a helpful AI assistant answering user queries based on provided documents.
-    Use the following context to generate a relevant response and if the reponse is not relevant, please let the user know that you couldn't find relevant information.:
+    return best_context
 
-    {context}
+def generate_response(prompt, context, max_length=512):
+    """Generate AI response using Mistral-7B with context."""
+    if context is None:
+        return "No relevant data found."
 
-    User question: {query}
-    Answer:
-    """
+    full_prompt = f"Context: {context}\n\nUser: {prompt}\nAssistant: Based on the provided context, here is the response:"
 
-    try:
-        # Run inference on LLM
-        response = llm(
-            prompt=prompt,
-            max_tokens=100,
-            temperature=0.1,
-            stop=["\n\n"]
-        )
-        
-        return response["choices"][0]["text"].strip()
+    inputs = tokenizer(
+        full_prompt, return_tensors="pt", padding=True, truncation=True, max_length=max_length
+    ).to("cuda")
 
-    except Exception as e:
-        return f"⚠️ Error: {str(e)}"
+    outputs = model.generate(
+        inputs.input_ids,
+        attention_mask=inputs.attention_mask,  
+        max_length=max_length,
+        temperature=0.7,
+        top_p=0.9,
+        do_sample=True,
+    )
 
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    return response.strip()
 
-if __name__ == "__main__":
-    while True:
-        query = input("\n💬 Ask a question (or type 'exit' to quit): ")
-        if query.lower() == "exit":
-            break
-        response = generate_response(query)
-        print("\n🤖 AI Response:\n", response)
